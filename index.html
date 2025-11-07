@@ -1,0 +1,432 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Microsoft Rewards Forecast — Professional</title>
+
+  <style>
+    :root{
+      --bg:#f4f7fb;
+      --surface:#ffffff;
+      --muted:#6b7280;
+      --accent:#0ea5a4;
+      --accent-2:#0369a1;
+      --card-border: rgba(16,24,40,0.04);
+      --radius:12px;
+      --shadow: 0 6px 20px rgba(16,24,40,0.06);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+      color-scheme: light;
+      color: #0f1724;
+    }
+
+    html,body{height:100%;margin:0;background:linear-gradient(180deg,#edf2f7 0%, #f8fafc 100%);-webkit-font-smoothing:antialiased}
+    .container{max-width:1100px;margin:28px auto;padding:20px;border-radius:16px;background:var(--surface);box-shadow:var(--shadow);border:1px solid var(--card-border)}
+    header{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+    .brand{display:flex;gap:12px;align-items:center}
+    .logo{width:46px;height:46px;display:grid;place-items:center;border-radius:10px;background:linear-gradient(135deg,var(--accent),var(--accent-2));color:white;font-weight:700}
+    h1{margin:0;font-size:18px}
+    .subtitle{margin:0;color:var(--muted);font-size:13px}
+
+    .layout{display:grid;grid-template-columns: 1fr 420px;gap:18px;margin-top:18px}
+    @media (max-width:980px){ .layout{grid-template-columns:1fr} }
+
+    .panel{background:var(--surface);border-radius:12px;padding:14px;border:1px solid var(--card-border)}
+    .controls{display:grid;gap:12px}
+    label{display:block;font-size:13px;color:var(--muted);margin-bottom:6px}
+    input[type="number"],select{width:100%;padding:10px 12px;border-radius:10px;border:1px solid rgba(15,23,42,0.06);background:transparent;font-size:14px;color:inherit;box-sizing:border-box}
+    .hint{font-size:12px;color:var(--muted);margin-top:6px}
+
+    .actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:8px}
+    button.primary{background:linear-gradient(90deg,var(--accent),var(--accent-2));color:white;border:0;padding:10px 14px;border-radius:10px;font-weight:700;cursor:pointer}
+    button.ghost{background:transparent;border:1px solid rgba(15,23,42,0.06);color:var(--muted);padding:10px 12px;border-radius:10px;cursor:pointer}
+
+    .summary{padding:12px;border-radius:10px;background:linear-gradient(180deg,rgba(14,165,164,0.04), rgba(3,105,161,0.02));border:1px solid rgba(14,165,164,0.08)}
+    .big{font-size:20px;font-weight:700;color:#05273a}
+    .muted{color:var(--muted);font-size:13px}
+
+    .results{margin-top:12px;overflow:auto;max-height:560px}
+    table{width:100%;border-collapse:collapse;margin-top:12px;font-size:13px;color:#0f1724}
+    thead th{position:sticky;top:0;background:var(--surface);padding:10px;border-bottom:1px solid rgba(15,23,42,0.06);text-align:left}
+    td{padding:10px;border-bottom:1px solid rgba(15,23,42,0.04);vertical-align:middle}
+    .nowrap{white-space:nowrap}
+    .tag{display:inline-block;padding:6px 8px;border-radius:999px;font-weight:700;font-size:12px}
+    .tag-base{background:rgba(3,105,161,0.06);color:var(--accent-2)}
+    .tag-bonus{background:rgba(14,165,164,0.06);color:var(--accent)}
+    .mini{font-size:12px;color:var(--muted)}
+
+    .progress{height:8px;background:rgba(15,23,42,0.03);border-radius:8px;overflow:hidden;margin-top:10px}
+    .progress > i{display:block;height:100%;background:linear-gradient(90deg,var(--accent),var(--accent-2));width:0%}
+
+    footer{margin-top:18px;text-align:center;color:var(--muted);font-size:13px}
+  </style>
+</head>
+<body>
+  <div class="container" role="main" aria-labelledby="title">
+    <header>
+      <div class="brand">
+        <div class="logo" aria-hidden="true">MR</div>
+        <div>
+          <h1 id="title">Microsoft Rewards Forecast</h1>
+          <p class="subtitle">Clean, professional and responsive forecast — detailed daily breakdown, minimal UI, low-latency rendering.</p>
+        </div>
+      </div>
+
+      <div style="text-align:right">
+        <div class="mini">Today: <span id="todayText"></span></div>
+        <div class="mini" id="rowsCount" style="margin-top:6px">Rows: 0</div>
+      </div>
+    </header>
+
+    <div class="layout" aria-live="polite">
+      <!-- Left: inputs -->
+      <div>
+        <div class="panel" aria-label="Inputs">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <div style="font-weight:800">Simulation inputs</div>
+            <div class="mini muted">Defaults: Gold (65/day), target 7500</div>
+          </div>
+
+          <div style="height:10px"></div>
+          <div class="controls" role="form" aria-labelledby="title">
+            <div>
+              <label for="level">Membership level</label>
+              <select id="level" aria-label="Membership level">
+                <option value="Gold" selected>Gold — 60 search + 5 task = 65/day</option>
+                <option value="Silver">Silver — 35/day</option>
+                <option value="Member">Member — 20/day</option>
+              </select>
+            </div>
+
+            <div>
+              <label for="currentPoints">Current points</label>
+              <input id="currentPoints" type="number" min="0" value="1530" aria-label="Current points" />
+            </div>
+
+            <div>
+              <label for="targetPoints">Target points</label>
+              <input id="targetPoints" type="number" min="0" value="7500" aria-label="Target points" />
+            </div>
+
+            <div>
+              <label for="streakDay">Current streak day (1 = Monday)</label>
+              <input id="streakDay" type="number" min="1" max="7" placeholder="" aria-label="Current streak day" />
+              <div class="hint">If 7, weekly +100 applies today. Placeholder set to today's weekday (1=Mon).</div>
+            </div>
+
+            <div>
+              <label for="puzzleCount">Current puzzle count</label>
+              <input id="puzzleCount" type="number" min="0" value="0" aria-label="Current puzzle count" />
+            </div>
+
+            <div>
+              <label for="monthlyBonus">Monthly day-1 bonus</label>
+              <input id="monthlyBonus" type="number" min="0" value="660" aria-label="Monthly bonus" />
+              <div class="hint">Set 660 or 690 depending on your region.</div>
+            </div>
+
+            <div class="actions" aria-hidden="false">
+              <button id="simulateBtn" class="primary">Run forecast</button>
+              <button id="resetBtn" class="ghost">Reset</button>
+            </div>
+
+            <div class="mini muted">Rules applied: +100 weekly streak (when streak reaches 7), +30 on Mondays, monthly 1st bonus, 12 puzzles → +1000.</div>
+          </div>
+        </div>
+
+        <div style="height:12px"></div>
+
+        <div class="panel summary" id="quickSummary" style="display:none" aria-live="polite">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <div>
+              <div class="mini muted">Forecast result</div>
+              <div id="resultTop" class="big">—</div>
+            </div>
+            <div style="text-align:right">
+              <div class="mini muted">End of day</div>
+              <div id="resultDate" class="big">—</div>
+            </div>
+          </div>
+
+          <div style="height:8px"></div>
+          <div id="resultDetail" class="muted">Detailed breakdown will appear in the results panel.</div>
+
+          <div class="progress" aria-hidden="true"><i id="progressBar" style="width:0%"></i></div>
+          <div style="height:8px"></div>
+          <div class="mini muted" id="renderInfo"></div>
+        </div>
+      </div>
+
+      <!-- Right: results -->
+      <div>
+        <div class="panel" style="display:flex;flex-direction:column;height:100%">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <div style="font-weight:800">Daily results</div>
+            <div class="mini muted">Each row shows exactly how points were added.</div>
+          </div>
+
+          <div id="results" class="results" role="region" aria-live="polite" tabindex="0">
+            <div class="mini muted" style="padding:14px">Run a forecast to show the day-by-day breakdown.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <footer>Responsive, professional layout — optimized for clarity and speed. No export option included to keep UI focused.</footer>
+  </div>
+
+  <script>
+    // Utilities
+    const $ = id => document.getElementById(id);
+    const pad = v => String(v).padStart(2,'0');
+    const formatDate = (d) => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+    const weekdayMon = d => (d.getDay() === 0) ? 7 : d.getDay(); // 1=Mon..7=Sun
+    const shortDay = d => d.toLocaleDateString(undefined,{weekday:'short'});
+
+    // Elements
+    const today = new Date();
+    $('todayText').textContent = `${formatDate(today)} (${shortDay(today)})`;
+    $('streakDay').placeholder = weekdayMon(new Date());
+
+    const simulateBtn = $('simulateBtn');
+    const resetBtn = $('resetBtn');
+    const resultsEl = $('results');
+    const summaryCard = $('quickSummary');
+    const resultTop = $('resultTop');
+    const resultDate = $('resultDate');
+    const resultDetail = $('resultDetail');
+    const progressBar = $('progressBar');
+    const renderInfo = $('renderInfo');
+    const rowsCountEl = $('rowsCount');
+
+    // Settings reader
+    function readSettings(){
+      const level = $('level').value;
+      const baseMap = { "Gold":65, "Silver":35, "Member":20 };
+      const base = baseMap[level] || 65;
+      const current = Math.max(0, parseInt($('currentPoints').value || '0', 10));
+      const target = Math.max(0, parseInt($('targetPoints').value || '7500', 10));
+      let streak = parseInt($('streakDay').value || $('streakDay').placeholder || '1', 10);
+      if (isNaN(streak) || streak < 1) streak = 1;
+      if (streak > 7) streak = 7;
+      let puzzles = parseInt($('puzzleCount').value || '0', 10);
+      if (isNaN(puzzles) || puzzles < 0) puzzles = 0;
+      const monthlyBonus = Math.max(0, parseInt($('monthlyBonus').value || '660', 10));
+      return { level, base, current, target, streak, puzzles, monthlyBonus };
+    }
+
+    // Compute forecast (fast, synchronous)
+    function computeForecast({ base, current, target, streak, puzzles, monthlyBonus }){
+      const WEEKLY_BONUS = 100;
+      const MONDAY_BONUS = 30;
+      const PUZZLE_TARGET = 12;
+      const PUZZLE_BONUS = 1000;
+      const MAX_DAYS = 20000;
+
+      const rows = [];
+      let total = current;
+      let dayIndex = 0;
+      const start = new Date(); start.setHours(0,0,0,0);
+
+      if (total >= target) return { rows: [], days: 0, final: { total, date: start } };
+
+      while (total < target && dayIndex < MAX_DAYS) {
+        const date = new Date(start.getTime() + dayIndex * 24*60*60*1000);
+        const wIdx = weekdayMon(date); // 1..7
+
+        let basePoints = base;
+        let monday = 0, monthly = 0, weekly = 0, puzzleBonus = 0;
+
+        if (wIdx === 1) monday = MONDAY_BONUS;
+        if (date.getDate() === 1) monthly = monthlyBonus;
+        if (streak === 7) {
+          weekly = WEEKLY_BONUS;
+          puzzles += 1;
+        }
+
+        const earned = basePoints + monday + monthly + weekly;
+        total += earned;
+
+        let puzzleAwards = 0;
+        while (puzzles >= PUZZLE_TARGET) {
+          puzzleBonus += PUZZLE_BONUS;
+          puzzleAwards += 1;
+          puzzles -= PUZZLE_TARGET;
+          total += PUZZLE_BONUS;
+        }
+
+        rows.push({
+          dayNumber: dayIndex + 1,
+          dateStr: formatDate(date),
+          dayName: shortDay(date),
+          breakdown: { base: basePoints, monday, monthly, weekly, puzzleBonus },
+          earned,
+          puzzleAwards,
+          cumulative: total,
+          streakApplied: streak,
+          puzzlesAfter: puzzles
+        });
+
+        // advance streak
+        if (streak === 7) streak = 1; else streak += 1;
+        if (streak > 7) streak = 1;
+
+        dayIndex++;
+      }
+
+      const finalDate = new Date(start.getTime() + Math.max(dayIndex-1,0) * 24*60*60*1000);
+      return { rows, days: dayIndex, final: { total, date: finalDate } };
+    }
+
+    // Build table header
+    function buildTableHeader(){
+      const table = document.createElement('table');
+      table.setAttribute('role','table');
+      table.innerHTML = `
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Date</th>
+            <th>Day</th>
+            <th class="nowrap">Earned</th>
+            <th>Breakdown</th>
+            <th class="nowrap">Cumulative</th>
+            <th class="nowrap">Streak</th>
+            <th>Puzzles</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      `;
+      return table;
+    }
+
+    // Render batch of rows
+    function renderRowsBatch(tbody, rows, startIndex, batchSize){
+      const end = Math.min(startIndex + batchSize, rows.length);
+      const frag = document.createDocumentFragment();
+      for (let i = startIndex; i < end; i++) {
+        const r = rows[i];
+        const tr = document.createElement('tr');
+
+        const parts = [];
+        if (r.breakdown.base) parts.push(`<span class="tag tag-base">base ${r.breakdown.base}</span>`);
+        if (r.breakdown.monday) parts.push(`<span class="tag tag-bonus">Mon +${r.breakdown.monday}</span>`);
+        if (r.breakdown.monthly) parts.push(`<span class="tag tag-bonus">1st +${r.breakdown.monthly}</span>`);
+        if (r.breakdown.weekly) parts.push(`<span class="tag tag-bonus">streak +${r.breakdown.weekly}</span>`);
+        if (r.breakdown.puzzleBonus) parts.push(`<span class="tag tag-bonus">puzzle +${r.breakdown.puzzleBonus}</span>`);
+
+        const breakdownHtml = parts.length ? parts.join(' ') : '<span class="mini muted">—</span>';
+
+        tr.innerHTML = `
+          <td class="mini">${r.dayNumber}</td>
+          <td class="nowrap">${r.dateStr}</td>
+          <td>${r.dayName}</td>
+          <td class="nowrap">${r.earned}${r.puzzleAwards ? ' (+'+(r.puzzleAwards*1000)+' puzzle)' : ''}</td>
+          <td>${breakdownHtml}</td>
+          <td class="nowrap">${r.cumulative}</td>
+          <td class="nowrap">${r.streakApplied}</td>
+          <td class="nowrap">${r.puzzlesAfter}</td>
+        `;
+        frag.appendChild(tr);
+      }
+      tbody.appendChild(frag);
+      return end;
+    }
+
+    // Progressive render
+    function progressiveRender(rows, onComplete){
+      resultsEl.innerHTML = '';
+      const table = buildTableHeader();
+      const tbody = table.querySelector('tbody');
+      resultsEl.appendChild(table);
+
+      const total = rows.length;
+      rowsCountEl.textContent = `Rows: ${total}`;
+
+      const batch = total > 2000 ? 500 : (total > 500 ? 200 : 100);
+      let index = 0;
+
+      function step(){
+        const next = renderRowsBatch(tbody, rows, index, batch);
+        index = next;
+
+        const pct = Math.min(100, Math.round((index/total)*100));
+        progressBar.style.width = pct + '%';
+        renderInfo.textContent = `Rendering ${index}/${total} rows — ${pct}%`;
+
+        if (index < total) {
+          if (window.requestIdleCallback) {
+            requestIdleCallback(step, {timeout:50});
+          } else {
+            setTimeout(step, 12);
+          }
+        } else {
+          progressBar.style.width = '100%';
+          renderInfo.textContent = `Rendered ${total} rows.`;
+          if (typeof onComplete === 'function') onComplete();
+        }
+      }
+      step();
+    }
+
+    // Interaction
+    let lastResult = null;
+
+    simulateBtn.addEventListener('click', () => {
+      resultsEl.innerHTML = `<div class="mini muted" style="padding:14px">Computing forecast…</div>`;
+      summaryCard.style.display = 'block';
+      progressBar.style.width = '3%';
+      renderInfo.textContent = 'Computing...';
+
+      const settings = readSettings();
+
+      // Slight delay to ensure UI updates before heavy compute for long runs
+      setTimeout(() => {
+        const r = computeForecast(settings);
+        lastResult = r;
+
+        if (r.rows.length === 0) {
+          resultTop.textContent = `Already at/above ${settings.target}`;
+          resultDate.textContent = formatDate(r.final.date);
+          resultDetail.textContent = `Current points ${r.final.total}. No days required.`;
+          resultsEl.innerHTML = `<div class="mini muted" style="padding:14px">You're already at or above the target.</div>`;
+          progressBar.style.width = '100%';
+          renderInfo.textContent = 'No rows to render.';
+          rowsCountEl.textContent = `Rows: 0`;
+          return;
+        }
+
+        resultTop.textContent = `${r.days} day(s)`;
+        resultDate.textContent = formatDate(r.final.date);
+        resultDetail.textContent = `End of day ${formatDate(r.final.date)}: ${r.final.total} points (start ${settings.current}).`;
+
+        progressiveRender(r.rows, () => {
+          // completed
+        });
+      }, 10);
+    });
+
+    resetBtn.addEventListener('click', () => {
+      $('level').value = 'Gold';
+      $('currentPoints').value = 1530;
+      $('targetPoints').value = 7500;
+      $('streakDay').value = '';
+      $('streakDay').placeholder = weekdayMon(new Date());
+      $('puzzleCount').value = 0;
+      $('monthlyBonus').value = 660;
+      resultsEl.innerHTML = `<div class="mini muted" style="padding:14px">Run a forecast to see the day-by-day breakdown.</div>`;
+      summaryCard.style.display = 'none';
+      progressBar.style.width = '0%';
+      renderInfo.textContent = '';
+      rowsCountEl.textContent = `Rows: 0`;
+      lastResult = null;
+    });
+
+    // Init
+    (function init(){
+      summaryCard.style.display = 'none';
+      rowsCountEl.textContent = `Rows: 0`;
+    })();
+  </script>
+</body>
+</html>

@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Microsoft Rewards Forecast</title>
+  <title>Microsoft Rewards Forecast · Visual Search</title>
 
   <style>
     :root{
@@ -53,6 +53,7 @@
     .tag{display:inline-block;padding:6px 8px;border-radius:999px;font-weight:700;font-size:12px}
     .tag-base{background:rgba(3,105,161,0.06);color:var(--accent-2)}
     .tag-bonus{background:rgba(14,165,164,0.06);color:var(--accent)}
+    .tag-visual{background:rgba(3,105,161,0.06);color:var(--accent-2)}
     .mini{font-size:12px;color:var(--muted)}
 
     .progress{height:8px;background:rgba(15,23,42,0.03);border-radius:8px;overflow:hidden;margin-top:10px}
@@ -68,7 +69,7 @@
         <div class="logo" aria-hidden="true">MR</div>
         <div>
           <h1 id="title">Microsoft Rewards Forecast</h1>
-          <p class="subtitle">Developer--->Tamilvendhan❤️</p>
+          <p class="subtitle">Developer--->Tamilvendhan❤️ </p>
         </div>
       </div>
 
@@ -90,11 +91,11 @@
           <div style="height:10px"></div>
           <div class="controls" role="form" aria-labelledby="title">
             <div>
-              <label for="level">Membership level</label>
+              <label for="level">Membership level (base points)</label>
               <select id="level" aria-label="Membership level">
-                <option value="Gold" selected>Gold- 30 search + 1 Task= 65points/day</option>
-                <option value="Silver">Silver — 35/day</option>
-                <option value="Member">Member — 20/day</option>
+                <option value="Gold" selected>Gold – 30 search + 1 Task = 65/day</option>
+                <option value="Silver">Silver – 35/day</option>
+                <option value="Member">Member – 20/day</option>
               </select>
             </div>
 
@@ -111,18 +112,32 @@
             <div>
               <label for="streakDay">Current streak day (1 = Monday)</label>
               <input id="streakDay" type="number" min="1" max="7" placeholder="" aria-label="Current streak day" />
-              <div class="hint">If 7, weekly +100 applies today. Placeholder set to today's weekday (1=Mon).</div>
+              <div class="hint">If 7, weekly +100 applies today. Placeholder = today's weekday (1=Mon).</div>
             </div>
 
             <div>
-              <label for="puzzleCount">Current puzzle count</label>
+              <label for="puzzleCount">Current puzzle count (0‑11 → 12 triggers +1000)</label>
               <input id="puzzleCount" type="number" min="0" value="0" aria-label="Current puzzle count" />
             </div>
 
             <div>
-              <label for="monthlyBonus">Monthly 1st-day bonus</label>
+              <label for="monthlyBonus">Monthly 1st‑day bonus (e.g. 660 / 690)</label>
               <input id="monthlyBonus" type="number" min="0" value="660" aria-label="Monthly bonus" />
-              <div class="hint">Set 660 or 690 depending on member.</div>
+            </div>
+
+            <!-- NEW: visual search toggle and streak -->
+            <div style="border-top:1px dashed rgba(0,0,0,0.06); margin:4px 0 8px;"></div>
+            <div>
+              <label for="visualEnabled" style="display:inline-flex; align-items:center; gap:8px; cursor:pointer;">
+                <input type="checkbox" id="visualEnabled" checked /> 
+                <span style="font-weight:500;"> 🖼️ Enable visual search (image search) </span>
+              </label>
+              <div class="hint" style="margin-left:24px;">+5 points/day, 7‑day streak → +100 bonus & puzzle++</div>
+            </div>
+            <div>
+              <label for="visualStreak">Current visual search streak (days)</label>
+              <input id="visualStreak" type="number" min="0" max="7" value="0" aria-label="Visual search streak count" />
+              <div class="hint">0‑7. When streak reaches 7 you get +100 bonus and puzzle +1 (resets to 0).</div>
             </div>
 
             <div class="actions" aria-hidden="false">
@@ -130,7 +145,7 @@
               <button id="resetBtn" class="ghost">Reset</button>
             </div>
 
-            <div class="mini muted">Rules applied: +100 weekly streak (when streak reaches 7), +30 on Mondays, monthly 1st bonus, 12 puzzles → +1000.</div>
+            <div class="mini muted">Rules: +100 weekly streak (day 7), Mon +30, monthly 1st bonus, 12 puzzles → +1000, visual 5/day + 7‑day bonus +100 & puzzle.</div>
           </div>
         </div>
 
@@ -172,7 +187,7 @@
       </div>
     </div>
 
-    <footer>The Goal of site is to forecaste how many days take to reach the specified points</footer>
+    <footer>The Goal of site is to forecast how many days take to reach the specified points</footer>
   </div>
 
   <script>
@@ -199,7 +214,7 @@
     const renderInfo = $('renderInfo');
     const rowsCountEl = $('rowsCount');
 
-    // Settings reader
+    // Settings reader (includes visual toggles)
     function readSettings(){
       const level = $('level').value;
       const baseMap = { "Gold":65, "Silver":35, "Member":20 };
@@ -212,15 +227,24 @@
       let puzzles = parseInt($('puzzleCount').value || '0', 10);
       if (isNaN(puzzles) || puzzles < 0) puzzles = 0;
       const monthlyBonus = Math.max(0, parseInt($('monthlyBonus').value || '660', 10));
-      return { level, base, current, target, streak, puzzles, monthlyBonus };
+
+      // Visual search
+      const visualEnabled = $('visualEnabled').checked;
+      let visualStreak = parseInt($('visualStreak').value || '0', 10);
+      if (isNaN(visualStreak) || visualStreak < 0) visualStreak = 0;
+      if (visualStreak > 7) visualStreak = 7;
+
+      return { level, base, current, target, streak, puzzles, monthlyBonus, visualEnabled, visualStreak };
     }
 
-    // Compute forecast (fast, synchronous)
-    function computeForecast({ base, current, target, streak, puzzles, monthlyBonus }){
+    // Compute forecast with visual search logic
+    function computeForecast({ base, current, target, streak, puzzles, monthlyBonus, visualEnabled, visualStreak }){
       const WEEKLY_BONUS = 100;
       const MONDAY_BONUS = 30;
       const PUZZLE_TARGET = 12;
       const PUZZLE_BONUS = 1000;
+      const VISUAL_DAILY = 5;
+      const VISUAL_STREAK_BONUS = 100;       // when visual streak reaches 7
       const MAX_DAYS = 20000;
 
       const rows = [];
@@ -234,22 +258,40 @@
         const date = new Date(start.getTime() + dayIndex * 24*60*60*1000);
         const wIdx = weekdayMon(date); // 1..7
 
+        // base + monday + monthly + weekly streak (normal)
         let basePoints = base;
-        let monday = 0, monthly = 0, weekly = 0, puzzleBonus = 0;
+        let monday = 0, monthly = 0, weekly = 0;
+        let visualEarned = 0;
+        let visualBonusApplied = false;
 
         if (wIdx === 1) monday = MONDAY_BONUS;
         if (date.getDate() === 1) monthly = monthlyBonus;
         if (streak === 7) {
           weekly = WEEKLY_BONUS;
-          puzzles += 1;
+          puzzles += 1;               // normal streak gives puzzle token
         }
 
-        const earned = basePoints + monday + monthly + weekly;
+        // ---- visual search handling ----
+        if (visualEnabled) {
+          visualEarned = VISUAL_DAILY;
+          visualStreak += 1;          // increment each day
+
+          if (visualStreak === 7) {
+            visualBonusApplied = true;
+            visualEarned += VISUAL_STREAK_BONUS;  // +100 bonus
+            puzzles += 1;                          // puzzle token from visual streak
+            visualStreak = 0;                       // reset streak after bonus
+          }
+        }
+
+        const earned = basePoints + monday + monthly + weekly + visualEarned;
         total += earned;
 
+        // puzzle awards (multiple possible)
         let puzzleAwards = 0;
+        let puzzleBonusPoints = 0;
         while (puzzles >= PUZZLE_TARGET) {
-          puzzleBonus += PUZZLE_BONUS;
+          puzzleBonusPoints += PUZZLE_BONUS;
           puzzleAwards += 1;
           puzzles -= PUZZLE_TARGET;
           total += PUZZLE_BONUS;
@@ -259,15 +301,23 @@
           dayNumber: dayIndex + 1,
           dateStr: formatDate(date),
           dayName: shortDay(date),
-          breakdown: { base: basePoints, monday, monthly, weekly, puzzleBonus },
+          breakdown: { 
+            base: basePoints, 
+            monday, 
+            monthly, 
+            weekly, 
+            visual: visualEarned,        // includes daily + eventual bonus
+            puzzleBonus: puzzleBonusPoints 
+          },
           earned,
           puzzleAwards,
           cumulative: total,
           streakApplied: streak,
+          visualStreakAfter: visualStreak,   // after increment/reset
           puzzlesAfter: puzzles
         });
 
-        // advance streak
+        // advance normal streak
         if (streak === 7) streak = 1; else streak += 1;
         if (streak > 7) streak = 1;
 
@@ -291,7 +341,8 @@
             <th class="nowrap">Earned</th>
             <th>Breakdown</th>
             <th class="nowrap">Cumulative</th>
-            <th class="nowrap">Streak</th>
+            <th>Streak</th>
+            <th>Visual</th>
             <th>Puzzles</th>
           </tr>
         </thead>
@@ -300,7 +351,7 @@
       return table;
     }
 
-    // Render batch of rows
+    // Render batch of rows (progressive)
     function renderRowsBatch(tbody, rows, startIndex, batchSize){
       const end = Math.min(startIndex + batchSize, rows.length);
       const frag = document.createDocumentFragment();
@@ -313,6 +364,12 @@
         if (r.breakdown.monday) parts.push(`<span class="tag tag-bonus">Mon +${r.breakdown.monday}</span>`);
         if (r.breakdown.monthly) parts.push(`<span class="tag tag-bonus">1st +${r.breakdown.monthly}</span>`);
         if (r.breakdown.weekly) parts.push(`<span class="tag tag-bonus">streak +${r.breakdown.weekly}</span>`);
+        if (r.breakdown.visual) {
+          // visual could be 5 or 5+100. separate hint?
+          const visualTotal = r.breakdown.visual;
+          const isBonusDay = visualTotal > 5; 
+          parts.push(`<span class="tag tag-visual">🖼️img ${visualTotal}${isBonusDay ? ' (incl.100)' : ''}</span>`);
+        }
         if (r.breakdown.puzzleBonus) parts.push(`<span class="tag tag-bonus">puzzle +${r.breakdown.puzzleBonus}</span>`);
 
         const breakdownHtml = parts.length ? parts.join(' ') : '<span class="mini muted">—</span>';
@@ -325,6 +382,7 @@
           <td>${breakdownHtml}</td>
           <td class="nowrap">${r.cumulative}</td>
           <td class="nowrap">${r.streakApplied}</td>
+          <td class="nowrap">${r.visualStreakAfter}</td>
           <td class="nowrap">${r.puzzlesAfter}</td>
         `;
         frag.appendChild(tr);
@@ -380,7 +438,6 @@
 
       const settings = readSettings();
 
-      // Slight delay to ensure UI updates before heavy compute for long runs
       setTimeout(() => {
         const r = computeForecast(settings);
         lastResult = r;
@@ -400,9 +457,7 @@
         resultDate.textContent = formatDate(r.final.date);
         resultDetail.textContent = `End of day ${formatDate(r.final.date)}: ${r.final.total} points (start ${settings.current}).`;
 
-        progressiveRender(r.rows, () => {
-          // completed
-        });
+        progressiveRender(r.rows, () => {});
       }, 10);
     });
 
@@ -414,6 +469,10 @@
       $('streakDay').placeholder = weekdayMon(new Date());
       $('puzzleCount').value = 0;
       $('monthlyBonus').value = 660;
+      // visual reset
+      $('visualEnabled').checked = true;
+      $('visualStreak').value = 0;
+
       resultsEl.innerHTML = `<div class="mini muted" style="padding:14px">Run a forecast to see the day-by-day breakdown.</div>`;
       summaryCard.style.display = 'none';
       progressBar.style.width = '0%';

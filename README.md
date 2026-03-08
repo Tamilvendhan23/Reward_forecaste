@@ -10,7 +10,6 @@
 - **index.html**: The main HTML file for the project's web interface.
 
 ---
-
 ## Features
 
 - Web-based interface for displaying reward data.

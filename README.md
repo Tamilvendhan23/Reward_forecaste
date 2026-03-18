@@ -41,7 +41,6 @@
 Contributions are welcome! Fork the repository, create a branch, and submit a pull request.
 
 ---
-
 ## Author
 
 - **Tamilvendhan**  
